@@ -205,3 +205,7 @@ echo "BAIDU_SECRET_KEY=你的密钥" >> .env.local
 ## 许可证
 
 MIT License
+
+## Author
+
+David Wu
