@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>百度翻译API代理测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        textarea, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        textarea:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .language-controls {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 15px;
+            align-items: end;
+        }
+
+        .swap-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s ease;
+        }
+
+        .swap-btn:hover {
+            background: #5a6fd8;
+        }
+
+        .translate-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            margin-top: 20px;
+        }
+
+        .translate-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .translate-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 10px;
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+        }
+
+        .result h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .result-text {
+            font-size: 18px;
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .error {
+            background: #fee;
+            border-left-color: #e74c3c;
+            color: #c0392b;
+        }
+
+        .loading {
+            text-align: center;
+            color: #667eea;
+        }
+
+        .api-url {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f1f3f4;
+            border-radius: 10px;
+            font-family: monospace;
+            font-size: 14px;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌐 翻译测试</h1>
+        
+        <div class="form-group">
+            <label for="sourceText">要翻译的文本：</label>
+            <textarea id="sourceText" placeholder="请输入要翻译的文本...">你好，世界！</textarea>
+        </div>
+
+        <div class="language-controls">
+            <div class="form-group">
+                <label for="fromLang">源语言：</label>
+                <select id="fromLang">
+                    <option value="auto">自动检测</option>
+                    <option value="zh" selected>中文</option>
+                    <option value="en">英语</option>
+                    <option value="ja">日语</option>
+                    <option value="ko">韩语</option>
+                    <option value="fr">法语</option>
+                    <option value="de">德语</option>
+                    <option value="es">西班牙语</option>
+                </select>
+            </div>
+
+            <button class="swap-btn" onclick="swapLanguages()">⇄</button>
+
+            <div class="form-group">
+                <label for="toLang">目标语言：</label>
+                <select id="toLang">
+                    <option value="en" selected>英语</option>
+                    <option value="zh">中文</option>
+                    <option value="ja">日语</option>
+                    <option value="ko">韩语</option>
+                    <option value="fr">法语</option>
+                    <option value="de">德语</option>
+                    <option value="es">西班牙语</option>
+                </select>
+            </div>
+        </div>
+
+        <button class="translate-btn" onclick="translate()" id="translateBtn">翻译</button>
+
+        <div id="result" class="result" style="display: none;">
+            <h3>翻译结果：</h3>
+            <div id="resultText" class="result-text"></div>
+        </div>
+
+        <div class="api-url">
+            <strong>API地址：</strong><br>
+            <span id="apiUrl">请先部署到Vercel获取API地址</span>
+        </div>
+    </div>
+
+    <script>
+        // 更新API URL显示
+        function updateApiUrl() {
+            const currentUrl = window.location.origin;
+            document.getElementById('apiUrl').textContent = `${currentUrl}/api/translate`;
+        }
+
+        // 交换语言
+        function swapLanguages() {
+            const fromLang = document.getElementById('fromLang');
+            const toLang = document.getElementById('toLang');
+            const temp = fromLang.value;
+            fromLang.value = toLang.value;
+            toLang.value = temp;
+        }
+
+        // 翻译函数
+        async function translate() {
+            const sourceText = document.getElementById('sourceText').value.trim();
+            const fromLang = document.getElementById('fromLang').value;
+            const toLang = document.getElementById('toLang').value;
+            const translateBtn = document.getElementById('translateBtn');
+            const result = document.getElementById('result');
+            const resultText = document.getElementById('resultText');
+
+            if (!sourceText) {
+                alert('请输入要翻译的文本');
+                return;
+            }
+
+            // 显示加载状态
+            translateBtn.disabled = true;
+            translateBtn.textContent = '翻译中...';
+            result.style.display = 'block';
+            result.className = 'result loading';
+            resultText.innerHTML = '正在翻译，请稍候...';
+
+            try {
+                const response = await fetch('/api/translate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        q: sourceText,
+                        from: fromLang,
+                        to: toLang
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    result.className = 'result';
+                    resultText.innerHTML = data.data.map(item => 
+                        `<div><strong>原文：</strong>${item.src}</div><div><strong>译文：</strong>${item.dst}</div>`
+                    ).join('<br>');
+                } else {
+                    result.className = 'result error';
+                    resultText.innerHTML = `翻译失败：${data.error}<br>详细信息：${data.details || '无'}`;
+                }
+            } catch (error) {
+                result.className = 'result error';
+                resultText.innerHTML = `请求失败：${error.message}`;
+            } finally {
+                translateBtn.disabled = false;
+                translateBtn.textContent = '翻译';
+            }
+        }
+
+        // 页面加载时更新API URL
+        document.addEventListener('DOMContentLoaded', updateApiUrl);
+
+        // 支持回车键翻译
+        document.getElementById('sourceText').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                translate();
+            }
+        });
+    </script>
+</body>
+</html> 
