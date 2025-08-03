@@ -179,7 +179,7 @@
                 </select>
             </div>
 
-            <button class="swap-btn" onclick="swapLanguages()">⇄</button>
+            <button class="swap-btn" id="swapBtn">⇄</button>
 
             <div class="form-group">
                 <label for="toLang">目标语言：</label>
@@ -195,7 +195,7 @@
             </div>
         </div>
 
-        <button class="translate-btn" onclick="translate()" id="translateBtn">翻译</button>
+        <button class="translate-btn" id="translateBtn">翻译</button>
 
         <div id="result" class="result" style="display: none;">
             <h3>翻译结果：</h3>
@@ -278,14 +278,22 @@
             }
         }
 
-        // 页面加载时更新API URL
-        document.addEventListener('DOMContentLoaded', updateApiUrl);
-
-        // 支持回车键翻译
-        document.getElementById('sourceText').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && e.ctrlKey) {
-                translate();
-            }
+        // 页面加载时更新API URL和绑定事件
+        document.addEventListener('DOMContentLoaded', function() {
+            updateApiUrl();
+            
+            // 绑定翻译按钮点击事件
+            document.getElementById('translateBtn').addEventListener('click', translate);
+            
+            // 绑定交换语言按钮点击事件
+            document.getElementById('swapBtn').addEventListener('click', swapLanguages);
+            
+            // 支持回车键翻译
+            document.getElementById('sourceText').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && e.ctrlKey) {
+                    translate();
+                }
+            });
         });
     </script>
 </body>
