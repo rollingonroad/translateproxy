@@ -5,6 +5,7 @@
       "maxDuration": 30
     }
   },
+  "regions": ["hkg1"],
   "headers": [
     {
       "source": "/api/(.*)",
