@@ -1,0 +1,90 @@
+name: Deploy to ECS (HK) with PM2 (root layout)
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "**"
+      - "!.github/**"     # 触发没问题，打包时会排除 .github
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_DIR: "release_${{ github.run_number }}"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Pack release (root project)
+        run: |
+          mkdir -p $RELEASE_DIR
+          rsync -a ./ $RELEASE_DIR/ \
+            --exclude node_modules \
+            --exclude .git \
+            --exclude .github \
+            --exclude "*.log"
+          tar czf ${RELEASE_DIR}.tar.gz $RELEASE_DIR
+
+      - name: Upload to ECS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.ECS_HOST }}
+          username: ${{ secrets.ECS_USER }}
+          key: ${{ secrets.ECS_SSH_KEY }}
+          source: "${{ env.RELEASE_DIR }}.tar.gz"
+          target: "/home/ecs-user/app/releases"
+
+      - name: Activate release on ECS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.ECS_HOST }}
+          username: ${{ secrets.ECS_USER }}
+          key: ${{ secrets.ECS_SSH_KEY }}
+          script: |
+            set -e
+            BASE="/home/ecs-user/app"
+            cd "$BASE/releases"
+
+            # 1) 解包 + 建时间戳目录
+            tar xzf ${{ env.RELEASE_DIR }}.tar.gz
+            NEW_DIR="$BASE/releases/$(date +%F_%H%M%S)"
+            mv ${{ env.RELEASE_DIR }} "$NEW_DIR"
+
+            # 2) 切 current 软链（原子发布）
+            ln -sfn "$NEW_DIR" "$BASE/current"
+
+            # 3) 安装后端生产依赖（现在在根）
+            cd "$BASE/current"
+            if [ -f package-lock.json ]; then
+              npm ci --omit=dev || npm install --omit=dev
+            else
+              npm install --omit=dev
+            fi
+
+            # 4) PM2 启动/重载（ecosystem 在根；带 --update-env）
+            if pm2 describe app-api >/dev/null 2>&1; then
+              npx pm2 reload "$BASE/current/ecosystem.config.js" --env production --update-env
+            else
+              npx pm2 start  "$BASE/current/ecosystem.config.js" --env production --update-env
+            fi
+            pm2 save
+
+            # 5) 修复 Nginx 读取 public 的权限
+            if id www-data >/dev/null 2>&1; then
+              WWWGROUP=www-data
+            else
+              WWWGROUP=nginx
+            fi
+            if [ -d "$BASE/current/public" ]; then
+              sudo chgrp -R "$WWWGROUP" "$BASE/current/public" || true
+              sudo chmod -R g+rx "$BASE/current/public" || true
+            fi
+            sudo chmod g+x /home/ecs-user /home/ecs-user/app || true
+
+            # 6) 重载 Nginx
+            sudo nginx -t
+            sudo systemctl reload nginx
+
+            # 7) 清理旧版本（只留最近 5 个）
+            ls -dt "$BASE"/releases/*/ | tail -n +6 | xargs -r rm -rf
