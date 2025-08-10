@@ -18,31 +18,30 @@
 2. 注册账号并创建应用
 3. 获取 `APP ID` 和 `密钥`
 
-### 2. 部署到Vercel
+### 2. 部署到生产环境
 
-#### 方法一：使用Vercel CLI
+#### 方式一：阿里云 ECS + pm2（推荐中国大陆环境）
 
 ```bash
-# 安装Vercel CLI
-npm i -g vercel
+# 进入项目目录并安装依赖
+npm install
 
-# 登录Vercel
-vercel login
+# 配置环境变量（生产）
+export BAIDU_APP_ID=你的APP_ID
+export BAIDU_SECRET_KEY=你的密钥
+# 可选禁用
+# export BAIDU_TRANSLATION_DISABLED=true
 
-# 部署项目
-vercel
-
-# 设置环境变量
-vercel env add BAIDU_APP_ID
-vercel env add BAIDU_SECRET_KEY
-# 可选：当你希望暂时禁用百度翻译提供方时设置为 true/1/yes/on
-vercel env add BAIDU_TRANSLATION_DISABLED
-
-# 部署到生产环境
-vercel --prod
+# 启动（pm2）
+npx pm2 start ecosystem.config.js --env production
+# 查看日志
+npx pm2 logs translateproxy
+# 停止/重启
+npx pm2 restart translateproxy
+npx pm2 stop translateproxy
 ```
 
-#### 方法二：使用GitHub集成
+#### 方式二：Vercel（海外环境可选）
 
 1. 将代码推送到GitHub仓库
 2. 在 [Vercel Dashboard](https://vercel.com/dashboard) 中导入项目
@@ -218,7 +217,7 @@ $.ajax({
 # 安装依赖
 npm install
 
-# 启动开发服务器
+# 启动本地服务器
 npm run dev
 
 # 设置本地环境变量
@@ -234,7 +233,7 @@ echo "BAIDU_SECRET_KEY=你的密钥" >> .env.local
 1. **API限制**: 百度翻译API有调用频率限制，请合理使用
 2. **环境变量**: 确保在Vercel中正确设置环境变量
    - 可选 `BAIDU_TRANSLATION_DISABLED` 用于一键禁用百度提供方（返回结构化 500 错误，便于程序处理）
-3. **CORS**: 服务已配置CORS，支持跨域请求
+3. **CORS**: 服务已配置CORS（Express + vercel.json 头在 ECS 可忽略），支持跨域请求
 4. **错误处理**: 服务包含完整的错误处理机制
 
 ## 许可证
