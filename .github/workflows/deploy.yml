@@ -23,7 +23,8 @@ jobs:
             --exclude node_modules \
             --exclude .git \
             --exclude .github \
-            --exclude "*.log"
+            --exclude "*.log" \
+            --exclude "$RELEASE_DIR"
           tar czf ${RELEASE_DIR}.tar.gz $RELEASE_DIR
 
       - name: Upload to ECS
@@ -50,6 +51,7 @@ jobs:
             tar xzf ${{ env.RELEASE_DIR }}.tar.gz
             NEW_DIR="$BASE/releases/$(date +%F_%H%M%S)"
             mv ${{ env.RELEASE_DIR }} "$NEW_DIR"
+            rm -f ${{ env.RELEASE_DIR }}.tar.gz
 
             # 2) 切 current 软链（原子发布）
             ln -sfn "$NEW_DIR" "$BASE/current"
