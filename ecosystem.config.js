@@ -7,6 +7,10 @@ module.exports = {
       exec_mode: 'cluster',
       watch: false,
       env: {
+        ENV_FILE: '/home/ecs-user/app/shared/.env.production',
+      },
+      env_production: {
+        ENV_FILE: '/home/ecs-user/app/shared/.env.production',
         NODE_ENV: 'production',
         PORT: process.env.PORT || 3000
       }

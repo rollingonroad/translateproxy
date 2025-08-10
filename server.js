@@ -1,7 +1,7 @@
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config();
+require('dotenv').config({ path: process.env.ENV_FILE });
 
 const translateHandler = require('./api/translate');
 const configHandler = require('./api/config');
