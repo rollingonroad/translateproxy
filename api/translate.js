@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const BAIDU_APP_ID = process.env.BAIDU_APP_ID;
 const BAIDU_SECRET_KEY = process.env.BAIDU_SECRET_KEY;
 const BAIDU_API_URL = 'https://fanyi-api.baidu.com/api/trans/vip/translate';
+const BAIDU_TRANSLATION_DISABLED = /^(1|true|yes|on)$/i.test(process.env.BAIDU_TRANSLATION_DISABLED || '');
 
 module.exports = async (req, res) => {
   // 设置CORS头
@@ -19,10 +20,21 @@ module.exports = async (req, res) => {
   }
 
   try {
+    // 若配置禁用百度翻译，直接返回 500
+    if (BAIDU_TRANSLATION_DISABLED) {
+      return res.status(500).json({
+        success: false,
+        errorCode: 'BAIDU_PROVIDER_DISABLED',
+        errorMessage: 'Baidu translation API has been disabled. Please use another translation provider.'
+      });
+    }
+
     // 检查环境变量
     if (!BAIDU_APP_ID || !BAIDU_SECRET_KEY) {
       return res.status(500).json({
-        error: '请在Vercel环境变量中设置BAIDU_APP_ID和BAIDU_SECRET_KEY'
+        success: false,
+        errorCode: 'MISSING_CREDENTIALS',
+        errorMessage: 'BAIDU_APP_ID and BAIDU_SECRET_KEY are not configured in environment.'
       });
     }
 
@@ -31,7 +43,9 @@ module.exports = async (req, res) => {
 
     if (!q) {
       return res.status(400).json({
-        error: '缺少翻译文本参数 q'
+        success: false,
+        errorCode: 'MISSING_PARAMETER_Q',
+        errorMessage: 'Missing required parameter: q'
       });
     }
 
@@ -66,8 +80,9 @@ module.exports = async (req, res) => {
       });
     } else {
       return res.status(400).json({
-        error: '翻译失败',
-        details: response.data
+        success: false,
+        errorCode: 'TRANSLATION_FAILED',
+        errorMessage: 'Translation failed.'
       });
     }
 
@@ -76,13 +91,15 @@ module.exports = async (req, res) => {
     
     if (error.response) {
       return res.status(error.response.status).json({
-        error: '百度翻译API错误',
-        details: error.response.data
+        success: false,
+        errorCode: 'BAIDU_API_ERROR',
+        errorMessage: 'Baidu translation API error.'
       });
     } else {
       return res.status(500).json({
-        error: '服务器内部错误',
-        details: error.message
+        success: false,
+        errorCode: 'INTERNAL_SERVER_ERROR',
+        errorMessage: 'Internal server error.'
       });
     }
   }

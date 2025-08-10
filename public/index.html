@@ -38,6 +38,20 @@
             font-weight: 300;
         }
 
+        .status-bar {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+        }
+        .badge.ok { background: #e6ffed; color: #0a4; }
+        .badge.warn { background: #fff5f5; color: #c00; }
+
         .form-group {
             margin-bottom: 20px;
         }
@@ -158,6 +172,10 @@
 <body>
     <div class="container">
         <h1>🌐 翻译测试</h1>
+        <div class="status-bar">
+            <span>BAIDU_TRANSLATION_DISABLED 状态：</span>&nbsp;
+            <span id="disabledBadge" class="badge">加载中...</span>
+        </div>
         
         <div class="form-group">
             <label for="sourceText">要翻译的文本：</label>
@@ -265,6 +283,10 @@
                     resultText.innerHTML = data.data.map(item => 
                         `<div><strong>原文：</strong>${item.src}</div><div><strong>译文：</strong>${item.dst}</div>`
                     ).join('<br>');
+                } else if (data && data.errorCode) {
+                    // 结构化错误（例如提供方被禁用），不影响页面功能
+                    result.className = 'result error';
+                    resultText.innerHTML = `请求返回错误：<code>[${data.errorCode}] ${data.errorMessage}</code>`;
                 } else {
                     result.className = 'result error';
                     resultText.innerHTML = `翻译失败：${data.error}<br>详细信息：${data.details || '无'}`;
@@ -278,9 +300,33 @@
             }
         }
 
+        // 获取并显示禁用标记状态（不影响功能）
+        async function loadConfig() {
+            const badge = document.getElementById('disabledBadge');
+            try {
+                const res = await fetch('/api/config');
+                const json = await res.json();
+                const disabled = !!(json && json.data && json.data.baiduTranslationDisabled);
+                if (disabled) {
+                    badge.textContent = '已启用禁用标记（不影响本页使用）';
+                    badge.classList.remove('ok');
+                    badge.classList.add('warn');
+                } else {
+                    badge.textContent = '未禁用';
+                    badge.classList.remove('warn');
+                    badge.classList.add('ok');
+                }
+            } catch (e) {
+                badge.textContent = '状态获取失败';
+                badge.classList.remove('ok');
+                badge.classList.add('warn');
+            }
+        }
+
         // 页面加载时更新API URL和绑定事件
         document.addEventListener('DOMContentLoaded', function() {
             updateApiUrl();
+            loadConfig();
             
             // 绑定翻译按钮点击事件
             document.getElementById('translateBtn').addEventListener('click', translate);

@@ -35,6 +35,8 @@ vercel
 # 设置环境变量
 vercel env add BAIDU_APP_ID
 vercel env add BAIDU_SECRET_KEY
+# 可选：当你希望暂时禁用百度翻译提供方时设置为 true/1/yes/on
+vercel env add BAIDU_TRANSLATION_DISABLED
 
 # 部署到生产环境
 vercel --prod
@@ -47,8 +49,28 @@ vercel --prod
 3. 在项目设置中添加环境变量：
    - `BAIDU_APP_ID`: 你的百度翻译APP ID
    - `BAIDU_SECRET_KEY`: 你的百度翻译密钥
+   - `BAIDU_TRANSLATION_DISABLED`（可选）：当设置为 `true`/`1`/`yes`/`on`（忽略大小写）时，接口将直接返回 500，并提示改用其他翻译提供方
 
 ## API使用说明
+
+### 配置接口（只读）
+
+用于查询运行时的禁用标记状态，供演示页面展示使用。
+
+```
+GET /api/config
+```
+
+响应示例：
+
+```json
+{
+  "success": true,
+  "data": {
+    "baiduTranslationDisabled": false
+  }
+}
+```
 
 ### 请求格式
 
@@ -106,11 +128,21 @@ Content-Type: application/json
 }
 ```
 
-**错误响应：**
+**错误响应（禁用开关触发，HTTP 500）：**
 ```json
 {
-  "error": "错误信息",
-  "details": "详细错误信息"
+  "success": false,
+  "errorCode": "BAIDU_PROVIDER_DISABLED",
+  "errorMessage": "Baidu translation API has been disabled. Please use another translation provider."
+}
+```
+
+**其他错误响应（统一结构）：**
+```json
+{
+  "success": false,
+  "errorCode": "MISSING_PARAMETER_Q",
+  "errorMessage": "Missing required parameter: q"
 }
 ```
 
@@ -150,7 +182,7 @@ translateText('你好世界', 'zh', 'en').then(result => {
   if (result.success) {
     console.log('翻译结果:', result.data[0].dst);
   } else {
-    console.error('翻译失败:', result.error);
+    console.error(`[${result.errorCode || 'ERROR'}] ${result.errorMessage || 'Unknown error'}`);
   }
 });
 ```
@@ -171,7 +203,7 @@ $.ajax({
     if (result.success) {
       console.log('翻译结果:', result.data[0].dst);
     } else {
-      console.error('翻译失败:', result.error);
+      console.error('翻译失败:', `[${result.errorCode || 'ERROR'}] ${result.errorMessage || 'Unknown error'}`);
     }
   },
   error: function(xhr, status, error) {
@@ -193,12 +225,15 @@ npm run dev
 # 在项目根目录创建 .env.local 文件
 echo "BAIDU_APP_ID=你的APP_ID" > .env.local
 echo "BAIDU_SECRET_KEY=你的密钥" >> .env.local
+# 可选：禁用百度翻译提供方
+# echo "BAIDU_TRANSLATION_DISABLED=true" >> .env.local
 ```
 
 ## 注意事项
 
 1. **API限制**: 百度翻译API有调用频率限制，请合理使用
 2. **环境变量**: 确保在Vercel中正确设置环境变量
+   - 可选 `BAIDU_TRANSLATION_DISABLED` 用于一键禁用百度提供方（返回结构化 500 错误，便于程序处理）
 3. **CORS**: 服务已配置CORS，支持跨域请求
 4. **错误处理**: 服务包含完整的错误处理机制
 
