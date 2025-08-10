@@ -154,7 +154,7 @@ Content-Type: application/json
 // GET请求
 async function translateText(text, from = 'zh', to = 'en') {
   const response = await fetch(
-    `https://your-vercel-app.vercel.app/api/translate?q=${encodeURIComponent(text)}&from=${from}&to=${to}`
+    `https://translateproxy-eta.vercel.app/api/translate?q=${encodeURIComponent(text)}&from=${from}&to=${to}`
   );
   const result = await response.json();
   return result;
@@ -162,7 +162,7 @@ async function translateText(text, from = 'zh', to = 'en') {
 
 // POST请求
 async function translateTextPost(text, from = 'zh', to = 'en') {
-  const response = await fetch('https://your-vercel-app.vercel.app/api/translate', {
+  const response = await fetch('https://translateproxy-eta.vercel.app/api/translate', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -191,7 +191,7 @@ translateText('你好世界', 'zh', 'en').then(result => {
 
 ```javascript
 $.ajax({
-  url: 'https://your-vercel-app.vercel.app/api/translate',
+  url: 'https://translateproxy-eta.vercel.app/api/translate',
   method: 'POST',
   data: JSON.stringify({
     q: '你好世界',
